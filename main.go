@@ -50,6 +50,7 @@ func client() {
 	if sess, err := kcp.DialWithOptions("127.0.0.1:30100", nil, 4, 2); err == nil {
 		for {
 			data := time.Now().String()
+			msg:=proto.
 			buf := make([]byte, len(data))
 			log.Println("sent:", data)
 			if _, err := sess.Write([]byte(data)); err == nil {
