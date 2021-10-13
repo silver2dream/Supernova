@@ -3,16 +3,14 @@ package main
 import (
 	"fmt"
 	"github.com/xtaci/kcp-go/v5"
-	"io"
+	"google.golang.org/protobuf/proto"
 	"log"
-	"time"
+	"supernova/proto"
 )
 
 func main() {
 	fmt.Println("This is supernova, the super project will be start.")
 	if lisener, err := kcp.ListenWithOptions("0.0.0.0:30100", nil, 4, 2); err == nil {
-		go client()
-
 		for {
 			s, err := lisener.AcceptKCP()
 			if err != nil {
@@ -27,44 +25,40 @@ func main() {
 
 func handlerEcho(s *kcp.UDPSession) {
 	buf := make([]byte, 4096)
-	for {
-		n, err := s.Read(buf)
-		if err != nil {
-			log.Println(err)
-			return
-		}
+	msg := make(chan []byte, 1000)
 
-		n, err = s.Write(buf[:n])
-		if err != nil {
-			log.Println(err)
-			return
-		}
-	}
-}
-
-func client() {
-	// wait for server to become ready
-	time.Sleep(time.Second)
-
-	// dial to the echo server
-	if sess, err := kcp.DialWithOptions("127.0.0.1:30100", nil, 4, 2); err == nil {
+	go func() {
 		for {
-			data := time.Now().String()
-			buf := make([]byte, len(data))
-			log.Println("sent:", data)
-			if _, err := sess.Write([]byte(data)); err == nil {
-				// read back the data
-				if _, err := io.ReadFull(sess, buf); err == nil {
-					log.Println("recv:", string(buf))
-				} else {
-					log.Fatal(err)
-				}
-			} else {
-				log.Fatal(err)
+			n, err := s.Read(buf)
+			if err != nil {
+				log.Println(err)
+				return
 			}
-			time.Sleep(time.Second)
+			msg <- buf[:n]
 		}
-	} else {
-		log.Fatal(err)
-	}
+	}()
+
+	go func() {
+		for {
+			select {
+			case pack := <-msg:
+				req := &pb.EchoReq{}
+				proto.Unmarshal(pack, req)
+				res := &pb.EchoRes{
+					Pong: req.Ping,
+				}
+				log.Println("server:", res.Pong)
+				data, _ := proto.Marshal(res)
+
+				go func() {
+					n, err := s.Write(data)
+					if err == nil {
+						log.Println(n)
+					}
+				}()
+
+			}
+
+		}
+	}()
 }

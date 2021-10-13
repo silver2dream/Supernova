@@ -1,0 +1,11 @@
+syntax = "proto3";
+option go_package = "/.;pb";
+package pb;
+
+message EchoReq {
+  string ping = 1;
+}
+
+message EchoRes {
+  string pong = 1;
+}
