@@ -5,11 +5,12 @@ import (
 	"github.com/xtaci/kcp-go/v5"
 	"google.golang.org/protobuf/proto"
 	"log"
-	"supernova/proto"
+
+	pb "supernova/proto"
 )
 
 func main() {
-	fmt.Println("This is supernova, the super project will be start.")
+	fmt.Println("** This is supernova, the super project will be start. **")
 	if lisener, err := kcp.ListenWithOptions("0.0.0.0:30100", nil, 4, 2); err == nil {
 		for {
 			s, err := lisener.AcceptKCP()
@@ -49,14 +50,10 @@ func handlerEcho(s *kcp.UDPSession) {
 				}
 				log.Println("server:", res.Pong)
 				data, _ := proto.Marshal(res)
-
-				go func() {
-					n, err := s.Write(data)
-					if err == nil {
-						log.Println(n)
-					}
-				}()
-
+				_, err := s.Write(data)
+				if err != nil {
+					log.Fatal(err)
+				}
 			}
 
 		}
